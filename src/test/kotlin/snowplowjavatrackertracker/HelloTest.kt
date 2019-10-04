@@ -1,0 +1,5 @@
+package snowplowjavatrackertracker
+
+class HelloTest {
+
+}
