@@ -12,6 +12,7 @@ import org.apache.http.impl.client.HttpClients
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 
 class SnowplowEventDispatcher<T>(
+    private val successCallback: (Int) -> Unit,
     private val failureCallback: (List<TrackerPayload>) -> Unit,
     private val trackerConfiguration: TrackerConfiguration,
     private val snowplowMapper: (T) -> Unstructured
@@ -28,7 +29,6 @@ class SnowplowEventDispatcher<T>(
         failedEvents.map { trackerPayload ->
             tracker.track(trackerPayload)
         }
-
     }
 
     override fun send(event: T, userId: String) {
@@ -43,7 +43,7 @@ class SnowplowEventDispatcher<T>(
         tracker.track(eventUnstructured)
     }
 
-    private fun createPoolManager(): CloseableHttpClient? {
+    private fun createPoolManager(): CloseableHttpClient {
         val manager = PoolingHttpClientConnectionManager()
         manager.defaultMaxPerRoute = trackerConfiguration.threadPoolSize
 
@@ -54,18 +54,16 @@ class SnowplowEventDispatcher<T>(
     }
 
     private fun emitter(): BatchEmitter {
-
         val clientAdapter = ApacheHttpClientAdapter.builder()
             .url(trackerConfiguration.collectorUrl)
             .httpClient(createPoolManager())
             .build()
         return BatchEmitter.builder()
             .httpClientAdapter(clientAdapter)
-            .requestCallback(EventRequestCallback(failureCallback))
+            .requestCallback(EventRequestCallback(successCallback, failureCallback))
             .bufferSize(trackerConfiguration.emitterSize)
             .build()
     }
-
 }
 
 data class TrackerConfiguration(
