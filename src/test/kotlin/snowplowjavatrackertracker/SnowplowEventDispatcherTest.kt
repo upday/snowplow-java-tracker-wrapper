@@ -23,6 +23,7 @@ class SnowplowEventDispatcherTest {
     fun startServer() {
         server = ClientAndServer.startClientAndServer(1080)
         MockServer().setupSnowplowOk()
+        print("hh")
     }
 
     @AfterAll
@@ -37,8 +38,8 @@ class SnowplowEventDispatcherTest {
         val json = SelfDescribingJson("schema", TrackerPayload().apply { addMap(mapOf("key" to "value")) })
         val successCallback = mockk<(Int) -> Unit>(relaxed = true)
         val failureCallback = mockk<(List<TrackerPayload>) -> Unit>(relaxed = true)
-        val mapper = mockk<(Event) -> Unstructured>()
-        every { mapper(any()) } returns Unstructured.builder().eventData(json).build()
+        val mapper = mockk<(Event) -> List<Unstructured>?>()
+        every { mapper(any()) } returns listOf(Unstructured.builder().eventData(json).build())
         val event = Event("hi")
 
         val dispatcher = SnowplowEventDispatcher(

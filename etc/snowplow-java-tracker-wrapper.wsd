@@ -1,0 +1,38 @@
+@startuml C4_Elements
+!includeurl   https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/release/1-0/C4_Container.puml
+
+skinparam RoundCorner 50
+skinparam SequenceLifeLineBorderColor Black
+skinparam SequenceParticipantBorderColor Black
+skinparam SequenceArrowThickness 3
+skinparam padding 30
+skinparam ParticipantPadding 100
+hide footbox
+
+skinparam Shadowing false
+skinparam SequenceTitleFontSize 70
+skinparam ParticipantFontSize 20
+skinparam ParticipantFontStyle Bold
+skinparam SequenceArrowFontSize 10
+skinparam NoteFontSize 40
+skinparam SequenceDividerFontSize 30
+skinparam SequenceGroupHeaderFontSize 50
+skinparam SequenceGroupFontSize 50
+
+title
+snowplow-java-tracker-wrapper architecture
+end title
+
+
+
+System(application, "application \n microservice")
+System(wrapper, "snowplow-java-tracker-wrapper \n ")
+System(collector,"snowplow \n collector endpoint ")
+
+
+Rel_R(application,wrapper,"uses library to process events")
+Rel_R(wrapper,collector,"http call to send events to collector")
+
+
+
+@enduml
