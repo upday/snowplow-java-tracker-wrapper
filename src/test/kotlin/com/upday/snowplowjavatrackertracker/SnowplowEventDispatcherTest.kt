@@ -1,4 +1,4 @@
-package snowplowjavatrackertracker
+package com.upday.snowplowjavatrackertracker
 
 import com.snowplowanalytics.snowplow.tracker.events.Unstructured
 import com.snowplowanalytics.snowplow.tracker.payload.SelfDescribingJson
@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.mockserver.integration.ClientAndServer
-import snowplowjavatrackertracker.mockserver.MockServer
+import com.upday.snowplowjavatrackertracker.mockserver.MockServer
 
 @TestInstance(Lifecycle.PER_CLASS)
 class SnowplowEventDispatcherTest {

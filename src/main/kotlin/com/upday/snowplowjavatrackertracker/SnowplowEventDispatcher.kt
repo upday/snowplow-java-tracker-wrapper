@@ -1,4 +1,4 @@
-package snowplowjavatrackertracker
+package com.upday.snowplowjavatrackertracker
 
 import com.snowplowanalytics.snowplow.tracker.DevicePlatform
 import com.snowplowanalytics.snowplow.tracker.Subject

@@ -1,4 +1,4 @@
-package snowplowjavatrackertracker.mockserver
+package com.upday.snowplowjavatrackertracker.mockserver
 
 import org.mockserver.client.server.MockServerClient
 import org.mockserver.model.HttpRequest.request

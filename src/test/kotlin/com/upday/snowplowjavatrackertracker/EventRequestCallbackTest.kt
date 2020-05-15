@@ -1,4 +1,4 @@
-package snowplowjavatrackertracker
+package com.upday.snowplowjavatrackertracker
 
 import com.snowplowanalytics.snowplow.tracker.payload.TrackerPayload
 import io.mockk.mockk
