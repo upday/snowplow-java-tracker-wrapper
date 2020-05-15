@@ -19,7 +19,7 @@
         <snowplow-java-tracker.version>0.8.2</snowplow-java-tracker.version>
         <ktor-client-apache.version>1.2.4</ktor-client-apache.version>
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
-        <maven-surefire-plugin.version>3.0.0-M4</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
     </properties>
 
     <dependencies>
