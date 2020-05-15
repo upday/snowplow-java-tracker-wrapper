@@ -23,7 +23,6 @@ class SnowplowEventDispatcherTest {
     fun startServer() {
         server = ClientAndServer.startClientAndServer(1080)
         MockServer().setupSnowplowOk()
-        print("hh")
     }
 
     @AfterAll
