@@ -1,4 +1,6 @@
 # snowplow-java-tracker-wrapper
+[![Apache License V.2](https://img.shields.io/badge/license-Apache%20V.2-blue.svg)](https://github.com/upday/snowplow-java-tracker-wrapper/blob/b725e4a8a77ed7d5619c782b66affdec3dea05af/LICENSE)
+
 
 ###
 Install
@@ -51,6 +53,15 @@ class SnowplowBatchEventDispatcher(
 }
 
 ```
+
+## Contributors
+
+Any contribution is appreciated. See the contributors list in: https://github.com/upday/snowplow-java-tracker-wrapper/graphs/contributors
+
+### Contributing 
+
+Pull requests are welcome.
+[Show your ❤ with a ★](https://github.com/upday/snowplow-java-tracker-wrapper/stargazers)
 
 
 
