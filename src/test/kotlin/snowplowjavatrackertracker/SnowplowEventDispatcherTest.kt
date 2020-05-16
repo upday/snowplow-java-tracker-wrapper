@@ -37,7 +37,7 @@ class SnowplowEventDispatcherTest {
         val json = SelfDescribingJson("schema", TrackerPayload().apply { addMap(mapOf("key" to "value")) })
         val successCallback = mockk<(Int) -> Unit>(relaxed = true)
         val failureCallback = mockk<(List<TrackerPayload>) -> Unit>(relaxed = true)
-        val mapper = mockk<(Event) -> List<Unstructured>?>()
+        val mapper = mockk<(Event) -> List<Unstructured?>>()
         every { mapper(any()) } returns listOf(Unstructured.builder().eventData(json).build())
         val event = Event("hi")
 

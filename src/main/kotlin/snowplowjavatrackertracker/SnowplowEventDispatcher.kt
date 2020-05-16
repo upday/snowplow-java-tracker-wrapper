@@ -15,7 +15,7 @@ class SnowplowEventDispatcher<T>(
     private val successCallback: (Int) -> Unit,
     private val failureCallback: (List<TrackerPayload>) -> Unit,
     private val trackerConfiguration: TrackerConfiguration,
-    private val snowplowMapper: (T) -> List<Unstructured>?
+    private val snowplowMapper: (T) -> List<Unstructured?>
 ) : EventDispatcher<T> {
 
     private val emitter = emitter()
@@ -39,8 +39,8 @@ class SnowplowEventDispatcher<T>(
                 .platform(DevicePlatform.General)
                 .build()
 
-        val eventsUnstructured : List<Unstructured>? = snowplowMapper(event)
-        eventsUnstructured?.map { eventUnstructured ->
+        val eventsUnstructured : List<Unstructured?> = snowplowMapper(event)
+        eventsUnstructured.map { eventUnstructured ->
             tracker.track(eventUnstructured)
         }
     }
