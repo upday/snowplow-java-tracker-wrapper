@@ -12,16 +12,14 @@ import org.apache.http.impl.client.HttpClients
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 
 class SnowplowEventDispatcher<T>(
-    private val successCallback: (Int) -> Unit,
-    private val failureCallback: (List<TrackerPayload>) -> Unit,
     private val trackerConfiguration: TrackerConfiguration,
-    private val snowplowMapper: (T) -> List<Unstructured?>
+    private val snowplowMapper: (T) -> List<Unstructured?>,
+    private val emitter: EventEmitter
 ) : EventDispatcher<T> {
 
-    private val emitter = emitter()
     override fun send(failedEvents: List<TrackerPayload>) {
         val tracker: Tracker =
-            Tracker.TrackerBuilder(emitter, trackerConfiguration.nameSpace, trackerConfiguration.appId)
+            Tracker.TrackerBuilder(emitter.batchEmitter(), trackerConfiguration.nameSpace, trackerConfiguration.appId)
                 .base64(true)
                 .platform(DevicePlatform.General)
                 .build()
@@ -33,17 +31,24 @@ class SnowplowEventDispatcher<T>(
 
     override fun send(event: T, userId: String) {
         val tracker: Tracker =
-            Tracker.TrackerBuilder(emitter, trackerConfiguration.nameSpace, trackerConfiguration.appId)
+            Tracker.TrackerBuilder(emitter.batchEmitter(), trackerConfiguration.nameSpace, trackerConfiguration.appId)
                 .base64(true)
                 .subject(Subject.SubjectBuilder().userId(userId).build())
                 .platform(DevicePlatform.General)
                 .build()
 
-        val eventsUnstructured : List<Unstructured?> = snowplowMapper(event)
+        val eventsUnstructured: List<Unstructured?> = snowplowMapper(event)
         eventsUnstructured.map { eventUnstructured ->
             tracker.track(eventUnstructured)
         }
     }
+}
+
+class EventEmitter(
+    private val trackerConfiguration: TrackerConfiguration,
+    private val successCallback: (Int) -> Unit,
+    private val failureCallback: (List<TrackerPayload>) -> Unit
+) {
 
     private fun createPoolManager(): CloseableHttpClient {
         val manager = PoolingHttpClientConnectionManager()
@@ -55,7 +60,7 @@ class SnowplowEventDispatcher<T>(
             .build()
     }
 
-    private fun emitter(): BatchEmitter {
+    fun batchEmitter(): BatchEmitter {
         val clientAdapter = ApacheHttpClientAdapter.builder()
             .url(trackerConfiguration.collectorUrl)
             .httpClient(createPoolManager())
@@ -66,7 +71,9 @@ class SnowplowEventDispatcher<T>(
             .bufferSize(trackerConfiguration.emitterSize)
             .build()
     }
+
 }
+
 
 data class TrackerConfiguration(
     val nameSpace: String,

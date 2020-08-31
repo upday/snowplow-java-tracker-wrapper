@@ -41,11 +41,14 @@ class SnowplowEventDispatcherTest {
         every { mapper(any()) } returns listOf(Unstructured.builder().eventData(json).build())
         val event = Event("hi")
 
+        val emitter = EventEmitter(TrackerConfiguration("name", "app", "http://localhost:1080", 1, 1), successCallback, failureCallback)
+
         val dispatcher = SnowplowEventDispatcher(
-            successCallback,
-            failureCallback,
-            TrackerConfiguration("name", "app", "http://localhost:1080", 1, 1),
-            mapper
+            trackerConfiguration = TrackerConfiguration("name", "app", "http://localhost:1080", 1, 1),
+            snowplowMapper = mapper,
+            emitter = emitter
+
+
         )
         dispatcher.send(event, "id")
 
