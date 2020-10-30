@@ -29,19 +29,18 @@ The following code showcases the usage or the wrapper in your service.
 
 ```kotlin
 @Component
-class SnowplowBatchEventDispatcher(
-    trackerProperties: TrackerProperties,
-    private val snowplowMapper: SnowplowMapper
-) : BatchEventDispatcher {
+class SnowplowEventDispatcher(private val snowplowMapper: SnowplowMapper) {
     
     private val dispatcher: SnowplowDispatcher = snowplowDispatcher(
         appId = "my-app-id",
         nameSpace = "app-namespace",
         collectorUrl = "http://localhost:1080",
-        onFailure = { successCount, failedEvents -> /* onFailure code logic */}
+        onFailure = { successCount, failedEvents -> /* onFailure code logic */} // this is optional
     )
 
-    override fun send(event: MyEvent) = dispatcher.send(snowplowMapper.map(event))
+    fun send(myEvent: MyEvent) = dispatcher.send(myEvent.toSnowplowEvent())
+
+    private fun MyEvent.toSnowplowEvent(): Event? = snowplowMapper.map(this)
 
     companion object {
         private val logger = KotlinLogging.logger {}
@@ -53,13 +52,10 @@ class SnowplowBatchEventDispatcher(
  */
 class SnowplowMapper(private val snowplowSchemaProvider: SnowplowSchemaProvider) {
 
-    fun map(myEvent: MyEvent): Event = mapToUnstructured(buildContext(myEvent), myEvent)
+    fun map(myEvent: MyEvent): Event? = mapToUnstructured(buildContext(myEvent), myEvent)
 
-    private fun mapToUnstructured(
-        context: List<SelfDescribingJson>,
-        myEvent: MyEvent
-    ): Event? {
-        return try {
+    private fun mapToUnstructured(context: List<SelfDescribingJson>, myEvent: MyEvent): Event? = 
+        try {
             Unstructured.builder()
                 .customContext(context)
                 .eventData(createEventData(myEvent))
@@ -70,7 +66,6 @@ class SnowplowMapper(private val snowplowSchemaProvider: SnowplowSchemaProvider)
             Metrics.counter("failed.to.parse.event").increment()
             null
         }
-    }
 
     private fun createEventData(event: Event): SelfDescribingJson =
         SelfDescribingJson(
@@ -79,11 +74,10 @@ class SnowplowMapper(private val snowplowSchemaProvider: SnowplowSchemaProvider)
         )
 
     private fun buildContext(myEvent: MyEvent) =
-                listOf(SelfDescribingJson(
-                        snowplowSchemaProvider.getEnvironmentContextSchema(),
-                        mapOf("my_app_context_name" to myEvent.attributes.appName)
-                ))
-
+        listOf(SelfDescribingJson(
+                snowplowSchemaProvider.getEnvironmentContextSchema(),
+                mapOf("my_app_context_name" to myEvent.attributes.appName)
+        ))
 }
 
 ```
