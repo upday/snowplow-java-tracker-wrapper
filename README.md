@@ -62,21 +62,20 @@ class SnowplowMapper(private val snowplowSchemaProvider: SnowplowSchemaProvider)
                 .subject(Subject.SubjectBuilder().userId(myEvent.userId).build())
                 .build()
         } catch (e: Exception) {
-            logger.error("Error parsing event ${e.localizedMessage}: $event")
-            Metrics.counter("failed.to.parse.event").increment()
+            logger.error("Error parsing event ${e.localizedMessage}: $myEvent")
             null
         }
 
-    private fun createEventData(event: Event): SelfDescribingJson =
+    private fun createEventData(myEvent: MyEvent): SelfDescribingJson =
         SelfDescribingJson(
-            snowplowSchemaProvider.getEventSchema(mapEventName(event)),
-            mapEventAttributesToMap(event)
+            snowplowSchemaProvider.getEventSchema(eventName = event.schemaName()),
+            myEvent.attributeToMap()
         )
 
     private fun buildContext(myEvent: MyEvent) =
         listOf(SelfDescribingJson(
-                snowplowSchemaProvider.getEnvironmentContextSchema(),
-                mapOf("my_app_context_name" to myEvent.attributes.appName)
+            snowplowSchemaProvider.getEnvironmentContextSchema(),
+            mapOf("my_app_context_name" to myEvent.attributes.appName)
         ))
 }
 
