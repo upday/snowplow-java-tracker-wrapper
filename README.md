@@ -25,71 +25,84 @@ In order to not implement and configure the [Snowplow Java Tracker](https://gith
 
 The following code showcases the usage or the wrapper in your service.
 1. usage of the dispatcher.
-2. example mapper
+2. example mapper with subject
 
 ```kotlin
 @Component
-class SnowplowBatchEventDispatcher(
-    private val trackerProperties: TrackerProperties,
-    private val snowplowMapper: SnowplowMapper
-) : BatchEventDispatcher {
+class SnowplowEventDispatcher(private val snowplowMapper: SnowplowMapper) {
+    
+    private val dispatcher: SnowplowDispatcher = snowplowDispatcher(
+        appId = "my-app-id",
+        nameSpace = "app-namespace",
+        collectorUrl = "http://localhost:1080",
+        onFailure = { successCount, failedEvents -> /* onFailure code logic */} // this is optional
+    )
 
-    override fun send(batchEvent: BatchEvent) {
+    fun send(myEvent: MyEvent) = dispatcher.send(myEvent.toSnowplowEvent())
 
-        val dispatcher = SnowplowEventDispatcher(
-            successCallback = { successCallback -> logger.info { successCallback } },
-            failureCallback = { failureCallback -> logger.info { failureCallback } },
-            trackerConfiguration = TrackerConfiguration(
-                nameSpace = trackerProperties.nameSpace,
-                appId = trackerProperties.appId,
-                collectorUrl = trackerProperties.url,
-                emitterSize = trackerProperties.emitterSize,
-                threadPoolSize = trackerProperties.threadpoolSize
-            ),
-            snowplowMapper = { _: BatchEvent -> snowplowMapper.map(batchEvent) }
-        )
-
-        dispatcher.send(batchEvent, batchEvent.batch.userId)
-
-    }
+    private fun MyEvent.toSnowplowEvent(): Event? = snowplowMapper.map(this)
 
     companion object {
         private val logger = KotlinLogging.logger {}
     }
 }
 
-class SnowplowMapper(val snowplowSchemaProvider: SnowplowSchemaProvider) {
+/**
+ *  Snowplow mapper example to include the usedId on subject
+ */
+class SnowplowMapper(private val snowplowSchemaProvider: SnowplowSchemaProvider) {
 
-    fun map(batchEvent: BatchEvent): List<Unstructured?> =
-        batchEvent.batch.events.mapNotNull {
-            mapToUnstructured(buildContext(batchEvent), it)
-        }
+    fun map(myEvent: MyEvent): Event? = mapToUnstructured(buildContext(myEvent), myEvent)
 
-    private fun mapToUnstructured(
-        context: List<SelfDescribingJson>,
-        event: Event
-    ): Unstructured? {
-        return try {
-            val timestamp = event.timestamp.toInstant().toEpochMilli()
+    private fun mapToUnstructured(context: List<SelfDescribingJson>, myEvent: MyEvent): Event? = 
+        try {
             Unstructured.builder()
                 .customContext(context)
-                .eventData(createEventData(event))
-                .timestamp(timestamp)
+                .eventData(createEventData(myEvent))
+                .subject(Subject.SubjectBuilder().userId(myEvent.userId).build())
                 .build()
         } catch (e: Exception) {
-            logger.error("Error parsing event ${e.localizedMessage}: $event")
-            Metrics.counter("failed.to.parse.event").increment()
+            logger.error("Error parsing event ${e.localizedMessage}: $myEvent")
             null
         }
-    }
 
-    private fun createEventData(event: Event): SelfDescribingJson? =
+    private fun createEventData(myEvent: MyEvent): SelfDescribingJson =
         SelfDescribingJson(
-            snowplowSchemaProvider.getEventSchema(mapEventName(event)),
-            mapEventAttributesToMap(event)
+            snowplowSchemaProvider.getEventSchema(eventName = event.schemaName()),
+            myEvent.attributeToMap()
         )
+
+    private fun buildContext(myEvent: MyEvent) =
+        listOf(SelfDescribingJson(
+            snowplowSchemaProvider.getEnvironmentContextSchema(),
+            mapOf("my_app_context_name" to myEvent.attributes.appName)
+        ))
 }
 
+```
+
+### _snowplowDispatcher_ doc
+```kotlin
+/**
+ * @param appId snowplow application ID
+ * @param nameSpace snowplow tracker name
+ * @param collectorUrl snowplow URL
+ * @param bufferSize Specifies how many events go into a POST, default 1
+ * @param threadCount The number of Threads that can be used to send events, default 50
+ * @param base64 enable base 64 encoding, default true
+ * @param onSuccess [(successCount: Int) -> Unit] called to each success request, default null
+ * @param onFailure [(successCount: Int, failedEvents: List<Event>) -> Unit] called to each failed request, default null
+ */
+fun snowplowDispatcher(
+    appId: String,
+    nameSpace: String,
+    collectorUrl: String,
+    bufferSize: Int = 1,
+    threadCount: Int = 50,
+    base64: Boolean = true,
+    onSuccess: SuccessCallback? = null,
+    onFailure: FailureCallback? = null
+): SnowplowDispatcher
 ```
 
 ## Contributors
