@@ -7,6 +7,9 @@ import com.snowplowanalytics.snowplow.tracker.emitter.Emitter
 import com.snowplowanalytics.snowplow.tracker.emitter.RequestCallback
 import com.snowplowanalytics.snowplow.tracker.events.Event
 import com.snowplowanalytics.snowplow.tracker.http.ApacheHttpClientAdapter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.apache.http.impl.client.HttpClients
 
 typealias SuccessCallback = (successCount: Int) -> Unit
@@ -20,7 +23,7 @@ typealias FailureCallback = (successCount: Int, failedEvents: List<Event>) -> Un
  * @param threadCount The number of Threads that can be used to send events, default 50
  * @param base64 enable base 64 encoding, default true
  * @param onSuccess [SuccessCallback] called to each success request, default null
- * @param onFailure [SuccessCallback] called to each failed request, default null
+ * @param onFailure [FailureCallback] called to each failed request, default null
  */
 fun snowplowDispatcher(
     appId: String,
@@ -38,7 +41,25 @@ fun snowplowDispatcher(
     )
 )
 
-private fun tracker(
+/**
+ * Retries emitting a list of failed events
+ * @param failedEvents all events failed on submission to snowplow collector
+ * @param appProperties Snowplow app details like appID, tracker name etc
+ * @param retryCount Number of retry attempts, default 5
+ * @param onSuccess [SuccessCallback] called to each success request
+ * @param onFailure [FailureCallback] called to each failed request
+ */
+fun retryFailedEvent(
+    failedEvents: List<Event>,
+    appProperties: SnowplowAppProperties,
+    retryCount: Int = 5,
+    onSuccess: SuccessCallback,
+    onFailure: FailureCallback
+) = CoroutineScope(Dispatchers.IO).launch {
+    failedEvents.forEach { RetryFailedEvents(appProperties, retryCount, onSuccess, onFailure).sendEvent(it) }
+}
+
+internal fun tracker(
     nameSpace: String,
     appId: String,
     base64: Boolean,
@@ -49,7 +70,7 @@ private fun tracker(
     .platform(DevicePlatform.General)
     .build()
 
-private fun emitter(
+internal fun emitter(
     collectorUrl: String,
     emitterSize: Int,
     threadCount: Int,

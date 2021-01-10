@@ -20,6 +20,7 @@ Install
 
 You have to send events from a Java/kotlin Application to Snowplow. Maybe you have to do this from several services.
 In order to not implement and configure the [Snowplow Java Tracker](https://github.com/snowplow/snowplow/wiki/Java-Tracker) several times you can use this wrapper instead.
+This also provides retry mechanism for failed snowplow events. By default it retries for 5 times before calling the failure callback. 
 
 ### How to use
 
@@ -78,7 +79,6 @@ class SnowplowMapper(private val snowplowSchemaProvider: SnowplowSchemaProvider)
             mapOf("my_app_context_name" to myEvent.attributes.appName)
         ))
 }
-
 ```
 
 ### _snowplowDispatcher_ doc
