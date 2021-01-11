@@ -9,6 +9,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle
 
 @TestInstance(Lifecycle.PER_CLASS)
 class SnowplowDispatcherTest {
+
     @Test
     fun `should call track`() {
         val tracker: Tracker = mockk(relaxed = true)

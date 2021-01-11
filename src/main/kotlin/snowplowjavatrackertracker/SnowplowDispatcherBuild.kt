@@ -16,11 +16,14 @@ typealias SuccessCallback = (successCount: Int) -> Unit
 typealias FailureCallback = (successCount: Int, failedEvents: List<Event>) -> Unit
 
 /**
+ * Sends Snowplow events to the Snowplow collector
+ *
  * @param appId snowplow application ID
  * @param nameSpace snowplow tracker name
  * @param collectorUrl snowplow URL
  * @param bufferSize Specifies how many events go into a POST, default 1
  * @param threadCount The number of Threads that can be used to send events, default 50
+ * @param retryCount The number of retry attempts before calling [FailureCallback], default 5
  * @param base64 enable base 64 encoding, default true
  * @param onSuccess [SuccessCallback] called to each success request, default null
  * @param onFailure [FailureCallback] called to each failed request, default null
@@ -31,33 +34,32 @@ fun snowplowDispatcher(
     collectorUrl: String,
     bufferSize: Int = 1,
     threadCount: Int = 50,
+    retryCount: Int = 5,
     base64: Boolean = true,
     onSuccess: SuccessCallback? = null,
     onFailure: FailureCallback? = null
 ): SnowplowDispatcher = SnowplowDispatcher(
     tracker(
         nameSpace, appId, base64,
-        emitter(collectorUrl, bufferSize, threadCount, onSuccess, onFailure)
+        emitter(collectorUrl, bufferSize, threadCount, onSuccess, { successCount, failedEvents ->
+            CoroutineScope(Dispatchers.IO).launch {
+                failedEvents.forEach {
+                    RetryFailedEvents(SnowplowAppProperties(
+                        appId = appId,
+                        collectorUrl = collectorUrl,
+                        nameSpace = nameSpace,
+                        isBase64Encoded = base64,
+                        emitterBufferSize = bufferSize,
+                        emitterThreadCount = threadCount),
+                        retryCount = retryCount,
+                        successCallback = onSuccess,
+                        finalFailureCallback = onFailure
+                    ).sendEvent(it)
+                }
+            }
+        })
     )
 )
-
-/**
- * Retries emitting a list of failed events
- * @param failedEvents all events failed on submission to snowplow collector
- * @param appProperties Snowplow app details like appID, tracker name etc
- * @param retryCount Number of retry attempts, default 5
- * @param onSuccess [SuccessCallback] called to each success request
- * @param onFailure [FailureCallback] called to each failed request
- */
-fun retryFailedEvent(
-    failedEvents: List<Event>,
-    appProperties: SnowplowAppProperties,
-    retryCount: Int = 5,
-    onSuccess: SuccessCallback,
-    onFailure: FailureCallback
-) = CoroutineScope(Dispatchers.IO).launch {
-    failedEvents.forEach { RetryFailedEvents(appProperties, retryCount, onSuccess, onFailure).sendEvent(it) }
-}
 
 internal fun tracker(
     nameSpace: String,

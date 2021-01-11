@@ -36,6 +36,7 @@ class SnowplowEventDispatcher(private val snowplowMapper: SnowplowMapper) {
         appId = "my-app-id",
         nameSpace = "app-namespace",
         collectorUrl = "http://localhost:1080",
+        retryCount = 5, /* Number of retries on failure, by default its 5 */
         onFailure = { successCount, failedEvents -> /* onFailure code logic */} // this is optional
     )
 
@@ -49,7 +50,7 @@ class SnowplowEventDispatcher(private val snowplowMapper: SnowplowMapper) {
 }
 
 /**
- *  Snowplow mapper example to include the usedId on subject
+ *  Snowplow mapper example to include the userId on subject
  */
 class SnowplowMapper(private val snowplowSchemaProvider: SnowplowSchemaProvider) {
 
@@ -89,6 +90,7 @@ class SnowplowMapper(private val snowplowSchemaProvider: SnowplowSchemaProvider)
  * @param collectorUrl snowplow URL
  * @param bufferSize Specifies how many events go into a POST, default 1
  * @param threadCount The number of Threads that can be used to send events, default 50
+ * @param retryCount The number of retry attempts before calling [FailureCallback], default 5
  * @param base64 enable base 64 encoding, default true
  * @param onSuccess [(successCount: Int) -> Unit] called to each success request, default null
  * @param onFailure [(successCount: Int, failedEvents: List<Event>) -> Unit] called to each failed request, default null
@@ -99,6 +101,7 @@ fun snowplowDispatcher(
     collectorUrl: String,
     bufferSize: Int = 1,
     threadCount: Int = 50,
+    retryCount: Int = 5,
     base64: Boolean = true,
     onSuccess: SuccessCallback? = null,
     onFailure: FailureCallback? = null

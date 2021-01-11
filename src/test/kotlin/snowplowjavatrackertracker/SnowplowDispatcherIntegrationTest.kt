@@ -43,50 +43,37 @@ class SnowplowDispatcherIntegrationTest {
         dispatcher.send(Fixtures.event(userId = "my-id-1"))
         dispatcher.send(Fixtures.event(userId = "my-id-2"))
 
-        verify(timeout = 500, exactly = 2) { successCallback(1) }
+        verify(timeout = 100, exactly = 2) { successCallback(1) }
     }
 
     @Test
     fun `should not throw an exception`() {
         val event = Fixtures.event()
-
         val dispatcher = snowplowDispatcher(
             "my-name",
             "app",
             "http://localhost:1080",
             1, 1
         )
+
         dispatcher.send(event)
     }
 
     @Test
-    fun `should call success callback after successfully re-sending failed event`() {
-        val event1: Event = Fixtures.event(userId = "user-1")
-
-        retryFailedEvent(
-            failedEvents = listOf(event1),
+    fun `should call failure callback after failure with retry attempts`(){
+        val dispatcher = snowplowDispatcher(
+            appId = "my-app-id",
+            nameSpace = "app-namespace",
+            collectorUrl = "http://localhost:1081",
             retryCount = 2,
-            appProperties = SnowplowAppProperties("app-test", "http://localhost:1080", "test"),
-            onFailure = failureCallback,
-            onSuccess = successCallback
+            onSuccess = successCallback,
+            onFailure = failureCallback
         )
+        val event1 = Fixtures.event(userId = "my-id-1")
+        val event2 = Fixtures.event(userId = "my-id-2")
 
-        verify(timeout = 500, exactly = 1) { successCallback(1) }
-        verify(timeout = 500, exactly = 0) { failureCallback(any(), any()) }
-    }
-
-    @Test
-    fun `should call failure callback after failures with retry attempts`() {
-        val event1: Event = Fixtures.event(userId = "user-1")
-        val event2: Event = Fixtures.event(userId = "user-2")
-
-        retryFailedEvent(
-            failedEvents = listOf(event1, event2),
-            retryCount = 2,
-            appProperties = SnowplowAppProperties("app-test", "http://localhost:1081", "test"),
-            onFailure = failureCallback,
-            onSuccess = successCallback
-        )
+        dispatcher.send(event1)
+        dispatcher.send(event2)
 
         verify(timeout = 400, exactly = 0) { failureCallback(any(), any()) }
         verify(timeout = 1200, exactly = 1) { failureCallback(0, listOf(event1)) }
