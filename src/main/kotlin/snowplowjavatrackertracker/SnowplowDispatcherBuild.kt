@@ -7,20 +7,26 @@ import com.snowplowanalytics.snowplow.tracker.emitter.Emitter
 import com.snowplowanalytics.snowplow.tracker.emitter.RequestCallback
 import com.snowplowanalytics.snowplow.tracker.events.Event
 import com.snowplowanalytics.snowplow.tracker.http.ApacheHttpClientAdapter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.apache.http.impl.client.HttpClients
 
 typealias SuccessCallback = (successCount: Int) -> Unit
 typealias FailureCallback = (successCount: Int, failedEvents: List<Event>) -> Unit
 
 /**
+ * Sends Snowplow events to the Snowplow collector
+ *
  * @param appId snowplow application ID
  * @param nameSpace snowplow tracker name
  * @param collectorUrl snowplow URL
  * @param bufferSize Specifies how many events go into a POST, default 1
  * @param threadCount The number of Threads that can be used to send events, default 50
+ * @param retryCount The number of retry attempts before calling [FailureCallback], default 5
  * @param base64 enable base 64 encoding, default true
  * @param onSuccess [SuccessCallback] called to each success request, default null
- * @param onFailure [SuccessCallback] called to each failed request, default null
+ * @param onFailure [FailureCallback] called to each failed request, default null
  */
 fun snowplowDispatcher(
     appId: String,
@@ -28,17 +34,34 @@ fun snowplowDispatcher(
     collectorUrl: String,
     bufferSize: Int = 1,
     threadCount: Int = 50,
+    retryCount: Int = 5,
     base64: Boolean = true,
     onSuccess: SuccessCallback? = null,
     onFailure: FailureCallback? = null
 ): SnowplowDispatcher = SnowplowDispatcher(
     tracker(
         nameSpace, appId, base64,
-        emitter(collectorUrl, bufferSize, threadCount, onSuccess, onFailure)
+        emitter(collectorUrl, bufferSize, threadCount, onSuccess, { successCount, failedEvents ->
+            CoroutineScope(Dispatchers.IO).launch {
+                failedEvents.forEach {
+                    RetryFailedEvents(SnowplowAppProperties(
+                        appId = appId,
+                        collectorUrl = collectorUrl,
+                        nameSpace = nameSpace,
+                        isBase64Encoded = base64,
+                        emitterBufferSize = bufferSize,
+                        emitterThreadCount = threadCount),
+                        retryCount = retryCount,
+                        successCallback = onSuccess,
+                        finalFailureCallback = onFailure
+                    ).sendEvent(it)
+                }
+            }
+        })
     )
 )
 
-private fun tracker(
+internal fun tracker(
     nameSpace: String,
     appId: String,
     base64: Boolean,
@@ -49,7 +72,7 @@ private fun tracker(
     .platform(DevicePlatform.General)
     .build()
 
-private fun emitter(
+internal fun emitter(
     collectorUrl: String,
     emitterSize: Int,
     threadCount: Int,

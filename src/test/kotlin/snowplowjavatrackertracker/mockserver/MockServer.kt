@@ -1,6 +1,6 @@
 package snowplowjavatrackertracker.mockserver
 
-import org.mockserver.client.server.MockServerClient
+import org.mockserver.client.MockServerClient
 import org.mockserver.model.HttpRequest.request
 import org.mockserver.model.HttpResponse.response
 

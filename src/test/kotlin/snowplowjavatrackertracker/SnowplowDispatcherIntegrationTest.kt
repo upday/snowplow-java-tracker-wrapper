@@ -1,9 +1,6 @@
 package snowplowjavatrackertracker
 
-import com.snowplowanalytics.snowplow.tracker.Subject
-import com.snowplowanalytics.snowplow.tracker.events.Unstructured
-import com.snowplowanalytics.snowplow.tracker.payload.SelfDescribingJson
-import com.snowplowanalytics.snowplow.tracker.payload.TrackerPayload
+import com.snowplowanalytics.snowplow.tracker.events.Event
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.AfterAll
@@ -19,6 +16,10 @@ class SnowplowDispatcherIntegrationTest {
 
     private lateinit var server: ClientAndServer
 
+    private val successCallback = mockk<(Int) -> Unit>(relaxed = true)
+
+    private val failureCallback = mockk<(Int, List<Event>) -> Unit>(relaxed = true)
+
     @BeforeAll
     fun startServer() {
         server = ClientAndServer.startClientAndServer(1080)
@@ -32,9 +33,6 @@ class SnowplowDispatcherIntegrationTest {
 
     @Test
     fun `should call mapper and success callback when sending valid event`() {
-        val json = SelfDescribingJson("schema", TrackerPayload().apply { addMap(mapOf("key" to "value")) })
-        val successCallback = mockk<(Int) -> Unit>(relaxed = true)
-
         val dispatcher = snowplowDispatcher(
             appId = "my-app-id",
             nameSpace = "app-namespace",
@@ -42,36 +40,43 @@ class SnowplowDispatcherIntegrationTest {
             onSuccess = successCallback
         )
 
-        dispatcher.send(
-            Unstructured.builder()
-                .eventData(json)
-                .subject(Subject.SubjectBuilder().userId("my-id-1").build())
-                .build()
-        )
-        dispatcher.send(
-            Unstructured.builder()
-                .eventData(json)
-                .subject(Subject.SubjectBuilder().userId("my-id-2").build())
-                .build()
-        )
+        dispatcher.send(Fixtures.event(userId = "my-id-1"))
+        dispatcher.send(Fixtures.event(userId = "my-id-2"))
 
-        verify(timeout = 500, exactly = 2) { successCallback(1) }
+        verify(timeout = 100, exactly = 2) { successCallback(1) }
     }
 
     @Test
     fun `should not throw an exception`() {
-        val json = SelfDescribingJson("schema", TrackerPayload().apply { addMap(mapOf("key" to "value")) })
-        val event = Unstructured.builder()
-            .eventData(json)
-            .subject(Subject.SubjectBuilder().userId("my-id").build())
-            .build()
-
+        val event = Fixtures.event()
         val dispatcher = snowplowDispatcher(
             "my-name",
             "app",
             "http://localhost:1080",
             1, 1
         )
+
         dispatcher.send(event)
+    }
+
+    @Test
+    fun `should call failure callback after failure with retry attempts`(){
+        val dispatcher = snowplowDispatcher(
+            appId = "my-app-id",
+            nameSpace = "app-namespace",
+            collectorUrl = "http://localhost:1081",
+            retryCount = 2,
+            onSuccess = successCallback,
+            onFailure = failureCallback
+        )
+        val event1 = Fixtures.event(userId = "my-id-1")
+        val event2 = Fixtures.event(userId = "my-id-2")
+
+        dispatcher.send(event1)
+        dispatcher.send(event2)
+
+        verify(timeout = 400, exactly = 0) { failureCallback(any(), any()) }
+        verify(timeout = 1200, exactly = 1) { failureCallback(0, listOf(event1)) }
+        verify(timeout = 1200, exactly = 1) { failureCallback(0, listOf(event2)) }
     }
 }
