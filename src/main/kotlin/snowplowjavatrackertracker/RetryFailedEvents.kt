@@ -4,7 +4,10 @@ import com.snowplowanalytics.snowplow.tracker.events.Event
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlinx.coroutines.delay
+import mu.KotlinLogging
 import kotlinx.coroutines.runBlocking
+
+private val logger = KotlinLogging.logger {}
 
 internal class RetryFailedEvents(
     private val snowplowAppProperties: SnowplowAppProperties,
@@ -29,6 +32,8 @@ internal class RetryFailedEvents(
         }
 
     private suspend fun retryFailure(successCount: Int, failedEvents: List<Event>) {
+        val attemptCount = retryCount - retryAttemptCounter + 1
+        logger.info { "Retrying to send event, attemptNumber: $attemptCount" }
         when {
             retryAttemptCounter > 1 -> {
                 delay(retryAttemptCounter.delay().toLong())
@@ -36,6 +41,7 @@ internal class RetryFailedEvents(
                 retryAttemptCounter--
             }
             else -> {
+                logger.error { "Retrial attempts failed for events: $failedEvents" }
                 finalFailureCallback?.let { it(successCount, failedEvents) }
             }
         }
