@@ -29,19 +29,22 @@ internal class RetryFailedEvents(
                     threadCount = emitterThreadCount,
                     onSuccess = successCallback,
                     onFailure = { successCount, failedEvents ->
-                        CoroutineScope(Dispatchers.IO).launch { retryFailure(successCount, failedEvents) }
+                        retryFailure(successCount, failedEvents)
                     })))
                 .send(event)
         }
     }
 
-    private suspend fun retryFailure(successCount: Int, failedEvents: List<Event>) {
+    private fun retryFailure(successCount: Int, failedEvents: List<Event>) {
         when {
-            retryAttemptCounter > 1 -> {
-                delay(retryAttemptCounter.delay().toLong())
-                failedEvents.forEach { sendEvent(it) }
-                retryAttemptCounter--
-            }
+            retryAttemptCounter > 1 ->
+                CoroutineScope(Dispatchers.IO).launch {
+                    val retrialDelay = retryAttemptCounter.delay()
+                    delay(retrialDelay.toLong())
+                    logger.info { "Retrying after $retrialDelay milliseconds" }
+                    failedEvents.forEach { sendEvent(it) }
+                    retryAttemptCounter--
+                }
             else -> {
                 logger.error { "Retrial attempts failed for events: $failedEvents" }
                 finalFailureCallback?.let { it(successCount, failedEvents) }
