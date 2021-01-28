@@ -3,8 +3,11 @@ package snowplowjavatrackertracker
 import com.snowplowanalytics.snowplow.tracker.events.Event
 import kotlin.math.pow
 import kotlin.random.Random
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
+import mu.KotlinLogging
 
 internal class RetryFailedEvents(
     private val snowplowAppProperties: SnowplowAppProperties,
@@ -14,7 +17,10 @@ internal class RetryFailedEvents(
 ) {
     private var retryAttemptCounter = retryCount
 
-    suspend fun sendEvent(event: Event) =
+    fun sendEvent(event: Event) {
+        val attemptCount = retryCount - retryAttemptCounter + 1
+        logger.info { "Retrying to send event, attemptCount: $attemptCount" }
+
         with(snowplowAppProperties) {
             SnowplowDispatcher(tracker(nameSpace, appId, true,
                 emitter(
@@ -23,10 +29,11 @@ internal class RetryFailedEvents(
                     threadCount = emitterThreadCount,
                     onSuccess = successCallback,
                     onFailure = { successCount, failedEvents ->
-                        runBlocking { retryFailure(successCount, failedEvents) }
+                        CoroutineScope(Dispatchers.IO).launch { retryFailure(successCount, failedEvents) }
                     })))
                 .send(event)
         }
+    }
 
     private suspend fun retryFailure(successCount: Int, failedEvents: List<Event>) {
         when {
@@ -36,6 +43,7 @@ internal class RetryFailedEvents(
                 retryAttemptCounter--
             }
             else -> {
+                logger.error { "Retrial attempts failed for events: $failedEvents" }
                 finalFailureCallback?.let { it(successCount, failedEvents) }
             }
         }
@@ -47,5 +55,6 @@ internal class RetryFailedEvents(
         private const val INITIAL_DELAY = 300
         private const val EXPONENTIAL_BASE = 2.0
         private val RANDOM_FACTOR = Random.nextInt(100, 500)
+        private val logger = KotlinLogging.logger {}
     }
 }
