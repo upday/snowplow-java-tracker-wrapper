@@ -13,7 +13,7 @@ internal class RetryFailedEvents(
     private val snowplowAppProperties: SnowplowAppProperties,
     private val retryCount: Int,
     private val successCallback: SuccessCallback? = null,
-    private val finalFailureCallback: FailureCallback? = null,
+    private val finalFailureCallback: FailureCallback? = null
 ) {
     private var retryAttemptCounter = retryCount
 
@@ -37,7 +37,7 @@ internal class RetryFailedEvents(
 
     private fun retryFailure(successCount: Int, failedEvents: List<Event>) {
         when {
-            retryAttemptCounter > 1 -> {
+            retryAttemptCounter > 1 ->
                 CoroutineScope(Dispatchers.IO).launch {
                     val retrialDelay = retryAttemptCounter.delay()
                     delay(retrialDelay.toLong())
@@ -45,7 +45,6 @@ internal class RetryFailedEvents(
                     failedEvents.forEach { sendEvent(it) }
                     retryAttemptCounter--
                 }
-            }
             else -> {
                 logger.error { "Retrial attempts failed for events: $failedEvents" }
                 finalFailureCallback?.let { it(successCount, failedEvents) }
