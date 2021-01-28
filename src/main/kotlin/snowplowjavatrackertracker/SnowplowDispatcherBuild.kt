@@ -7,9 +7,6 @@ import com.snowplowanalytics.snowplow.tracker.emitter.Emitter
 import com.snowplowanalytics.snowplow.tracker.emitter.RequestCallback
 import com.snowplowanalytics.snowplow.tracker.events.Event
 import com.snowplowanalytics.snowplow.tracker.http.ApacheHttpClientAdapter
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.apache.http.impl.client.HttpClients
 
 typealias SuccessCallback = (successCount: Int) -> Unit
@@ -42,20 +39,18 @@ fun snowplowDispatcher(
     tracker(
         nameSpace, appId, base64,
         emitter(collectorUrl, bufferSize, threadCount, onSuccess, { successCount, failedEvents ->
-            CoroutineScope(Dispatchers.IO).launch {
-                failedEvents.forEach {
-                    RetryFailedEvents(SnowplowAppProperties(
-                        appId = appId,
-                        collectorUrl = collectorUrl,
-                        nameSpace = nameSpace,
-                        isBase64Encoded = base64,
-                        emitterBufferSize = bufferSize,
-                        emitterThreadCount = threadCount),
-                        retryCount = retryCount,
-                        successCallback = onSuccess,
-                        finalFailureCallback = onFailure
-                    ).sendEvent(it)
-                }
+            failedEvents.forEach {
+                RetryFailedEvents(SnowplowAppProperties(
+                    appId = appId,
+                    collectorUrl = collectorUrl,
+                    nameSpace = nameSpace,
+                    isBase64Encoded = base64,
+                    emitterBufferSize = bufferSize,
+                    emitterThreadCount = threadCount),
+                    retryCount = retryCount,
+                    successCallback = onSuccess,
+                    finalFailureCallback = onFailure
+                ).sendEvent(it)
             }
         })
     )

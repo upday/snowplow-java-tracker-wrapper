@@ -3,11 +3,11 @@ package snowplowjavatrackertracker
 import com.snowplowanalytics.snowplow.tracker.events.Event
 import kotlin.math.pow
 import kotlin.random.Random
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import mu.KotlinLogging
-import kotlinx.coroutines.runBlocking
-
-private val logger = KotlinLogging.logger {}
 
 internal class RetryFailedEvents(
     private val snowplowAppProperties: SnowplowAppProperties,
@@ -17,7 +17,10 @@ internal class RetryFailedEvents(
 ) {
     private var retryAttemptCounter = retryCount
 
-    suspend fun sendEvent(event: Event) =
+    fun sendEvent(event: Event) {
+        val attemptCount = retryCount - retryAttemptCounter + 1
+        logger.info { "Retrying to send event, attemptNumber: $attemptCount" }
+
         with(snowplowAppProperties) {
             SnowplowDispatcher(tracker(nameSpace, appId, true,
                 emitter(
@@ -26,18 +29,18 @@ internal class RetryFailedEvents(
                     threadCount = emitterThreadCount,
                     onSuccess = successCallback,
                     onFailure = { successCount, failedEvents ->
-                        runBlocking { retryFailure(successCount, failedEvents) }
+                        CoroutineScope(Dispatchers.IO).launch { retryFailure(successCount, failedEvents) }
                     })))
                 .send(event)
         }
+    }
 
     private suspend fun retryFailure(successCount: Int, failedEvents: List<Event>) {
-        val attemptCount = retryCount - retryAttemptCounter + 1
-        logger.info { "Retrying to send event, attemptNumber: $attemptCount" }
         when {
             retryAttemptCounter > 1 -> {
                 delay(retryAttemptCounter.delay().toLong())
                 failedEvents.forEach { sendEvent(it) }
+                println(Thread.currentThread().name)
                 retryAttemptCounter--
             }
             else -> {
@@ -50,8 +53,9 @@ internal class RetryFailedEvents(
     private fun Int.delay() = INITIAL_DELAY * EXPONENTIAL_BASE.pow(retryCount - this + 1) + RANDOM_FACTOR
 
     companion object {
-        private const val INITIAL_DELAY = 300
+        private const val INITIAL_DELAY = 600
         private const val EXPONENTIAL_BASE = 2.0
         private val RANDOM_FACTOR = Random.nextInt(100, 500)
+        private val logger = KotlinLogging.logger {}
     }
 }
