@@ -19,10 +19,10 @@ internal class RetryFailedEvents(
 
     fun sendEvent(event: Event) {
         val attemptCount = retryCount - retryAttemptCounter + 1
-        logger.info { "Retrying to send event, attemptCount: $attemptCount" }
+        logger.info { "Retrying to send event : $event, attemptCount: $attemptCount" }
 
         with(snowplowAppProperties) {
-            SnowplowDispatcher(tracker(nameSpace, appId, true,
+            val dispatcher = SnowplowDispatcher(tracker(nameSpace, appId, true,
                 emitter(
                     collectorUrl = collectorUrl,
                     emitterSize = emitterBufferSize,
@@ -31,11 +31,13 @@ internal class RetryFailedEvents(
                     onFailure = { successCount, failedEvents ->
                         retryFailure(successCount, failedEvents)
                     })))
-                .send(event)
+            logger.info { "Created a valid dispatcher: ${dispatcher.hashCode()}" }
+            dispatcher.send(event)
         }
     }
 
     private fun retryFailure(successCount: Int, failedEvents: List<Event>) {
+        logger.info { "retryFailure: ${failedEvents.stream().map { event -> event.eventId }}" }
         when {
             retryAttemptCounter > 1 ->
                 CoroutineScope(Dispatchers.IO).launch {
