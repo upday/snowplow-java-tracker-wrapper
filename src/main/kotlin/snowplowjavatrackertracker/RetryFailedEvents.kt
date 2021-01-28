@@ -19,7 +19,7 @@ internal class RetryFailedEvents(
 
     fun sendEvent(event: Event) {
         val attemptCount = retryCount - retryAttemptCounter + 1
-        logger.info { "Retrying to send event, attemptNumber: $attemptCount" }
+        logger.info { "Retrying to send event, attemptCount: $attemptCount" }
 
         with(snowplowAppProperties) {
             SnowplowDispatcher(tracker(nameSpace, appId, true,
@@ -40,7 +40,6 @@ internal class RetryFailedEvents(
             retryAttemptCounter > 1 -> {
                 delay(retryAttemptCounter.delay().toLong())
                 failedEvents.forEach { sendEvent(it) }
-                println(Thread.currentThread().name)
                 retryAttemptCounter--
             }
             else -> {
@@ -53,7 +52,7 @@ internal class RetryFailedEvents(
     private fun Int.delay() = INITIAL_DELAY * EXPONENTIAL_BASE.pow(retryCount - this + 1) + RANDOM_FACTOR
 
     companion object {
-        private const val INITIAL_DELAY = 600
+        private const val INITIAL_DELAY = 300
         private const val EXPONENTIAL_BASE = 2.0
         private val RANDOM_FACTOR = Random.nextInt(100, 500)
         private val logger = KotlinLogging.logger {}
