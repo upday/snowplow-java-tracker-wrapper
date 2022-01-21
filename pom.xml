@@ -13,16 +13,16 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.4.21</kotlin.version>
+        <kotlin.version>1.6.10</kotlin.version>
         <kotlin.code.style>official</kotlin.code.style>
-        <snowplow-java-tracker.version>0.10.1</snowplow-java-tracker.version>
-        <ktor-client-apache.version>1.5.0</ktor-client-apache.version>
-        <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
+        <snowplow-java-tracker.version>0.11.0</snowplow-java-tracker.version>
+        <ktor-client-apache.version>1.6.7</ktor-client-apache.version>
+        <maven-compiler-plugin.version>3.9.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
-        <junit-jupiter-api.version>5.7.0</junit-jupiter-api.version>
-        <io.mockk.version>1.10.2</io.mockk.version>
+        <junit-jupiter-api.version>5.8.2</junit-jupiter-api.version>
+        <io.mockk.version>1.12.2</io.mockk.version>
         <mockserver-netty.version>5.11.2</mockserver-netty.version>
-        <kotlin.logging.version>2.0.4</kotlin.logging.version>
+        <kotlin.logging.version>2.1.21</kotlin.logging.version>
     </properties>
 
     <dependencies>
