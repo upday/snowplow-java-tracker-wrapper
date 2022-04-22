@@ -20,7 +20,7 @@ Install
 
 You have to send events from a Java/kotlin Application to Snowplow. Maybe you have to do this from several services.
 In order to not implement and configure the [Snowplow Java Tracker](https://github.com/snowplow/snowplow/wiki/Java-Tracker) several times you can use this wrapper instead.
-This also provides retry mechanism for failed snowplow events. By default it retries for 5 times before calling the failure callback. 
+With `snowplow-java-tracker` version `0.12.0`, tracker automatically retries when response code is not `2xx` and users no longer have to handle retry on failed events. 
 
 ### How to use
 
@@ -35,18 +35,12 @@ class SnowplowEventDispatcher(private val snowplowMapper: SnowplowMapper) {
     private val dispatcher: SnowplowDispatcher = snowplowDispatcher(
         appId = "my-app-id",
         nameSpace = "app-namespace",
-        collectorUrl = "http://localhost:1080",
-        retryCount = 5, /* Number of retries on failure, by default its 5 */
-        onFailure = { successCount, failedEvents -> /* onFailure code logic */} // this is optional
+        collectorUrl = "http://localhost:1080"
     )
 
     fun send(myEvent: MyEvent) = dispatcher.send(myEvent.toSnowplowEvent())
 
     private fun MyEvent.toSnowplowEvent(): Event? = snowplowMapper.map(this)
-
-    companion object {
-        private val logger = KotlinLogging.logger {}
-    }
 }
 
 /**
@@ -90,10 +84,7 @@ class SnowplowMapper(private val snowplowSchemaProvider: SnowplowSchemaProvider)
  * @param collectorUrl snowplow URL
  * @param bufferSize Specifies how many events go into a POST, default 1
  * @param threadCount The number of Threads that can be used to send events, default 50
- * @param retryCount The number of retry attempts before calling [FailureCallback], default 5
  * @param base64 enable base 64 encoding, default true
- * @param onSuccess [(successCount: Int) -> Unit] called to each success request, default null
- * @param onFailure [(successCount: Int, failedEvents: List<Event>) -> Unit] called to each failed request, default null
  */
 fun snowplowDispatcher(
     appId: String,
@@ -101,10 +92,7 @@ fun snowplowDispatcher(
     collectorUrl: String,
     bufferSize: Int = 1,
     threadCount: Int = 50,
-    retryCount: Int = 5,
-    base64: Boolean = true,
-    onSuccess: SuccessCallback? = null,
-    onFailure: FailureCallback? = null
+    base64: Boolean = true
 ): SnowplowDispatcher
 ```
 
@@ -116,8 +104,4 @@ Any contribution is appreciated. See the contributors list in: https://github.co
 
 Pull requests are welcome.
 [Show your ❤ with a ★](https://github.com/upday/snowplow-java-tracker-wrapper/stargazers)
-
-
-
-### TODO
 

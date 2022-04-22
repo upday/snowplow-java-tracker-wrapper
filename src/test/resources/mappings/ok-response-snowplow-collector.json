@@ -1,0 +1,9 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPattern": "/com.snowplowanalytics.snowplow/tp2"
+  },
+  "response": {
+    "status": 200
+  }
+}

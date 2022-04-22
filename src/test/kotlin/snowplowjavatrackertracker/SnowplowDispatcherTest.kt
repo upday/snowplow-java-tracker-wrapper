@@ -5,13 +5,13 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.TestInstance.Lifecycle
+import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 
-@TestInstance(Lifecycle.PER_CLASS)
+@TestInstance(PER_CLASS)
 class SnowplowDispatcherTest {
 
     @Test
-    fun `should call track`() {
+    fun `should call snowplow tracker`() {
         val tracker: Tracker = mockk(relaxed = true)
         val dispatcher = SnowplowDispatcher(tracker)
         val event = Fixtures.event()
@@ -22,7 +22,7 @@ class SnowplowDispatcherTest {
     }
 
     @Test
-    fun `should not call track`() {
+    fun `should not call snowplow tracker`() {
         val tracker: Tracker = mockk(relaxed = true)
         val dispatcher = SnowplowDispatcher(tracker)
 
